@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: Please use the following metadata when citing this project in your work.
+title: Functionable
+abstract: Enhances modules to be functional by default.
+version: 0.0.0
+license: Hippocratic-2.1
+date-released: 2025-11-02
+authors:
+  - family-names: Kuhlmann
+    given-names: Brooke
+    affiliation: Alchemists
+    orcid: https://orcid.org/0000-0002-5810-6268
+keywords:
+ - ruby
+repository-code: https://github.com/bkuhlmann/functionable
+repository-artifact: https://rubygems.org/gems/functionable
+url: https://alchemists.io/projects/functionable
