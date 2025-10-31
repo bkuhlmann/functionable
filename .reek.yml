@@ -3,5 +3,11 @@ exclude_paths:
   - vendor
 
 detectors:
+  DuplicateMethodCall:
+    exclude:
+      - Functionable#self.extended
   LongParameterList:
     enabled: false
+  TooManyStatements:
+    exclude:
+      - Functionable#self.extended

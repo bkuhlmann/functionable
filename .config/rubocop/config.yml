@@ -1,2 +1,17 @@
 inherit_gem:
   caliber: config/all.yml
+
+Lint/UselessAccessModifier:
+  Enabled: false
+Style/ClassVars:
+  Exclude:
+    - spec/lib/functionable_spec.rb
+Metrics/AbcSize:
+  AllowedMethods:
+    - extended
+Metrics/BlockLength:
+  Exclude:
+    - lib/functionable.rb
+Metrics/MethodLength:
+  AllowedMethods:
+    - extended
