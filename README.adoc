@@ -2,15 +2,25 @@
 :toclevels: 5
 :figure-caption!:
 
+:module_function_link: link:https://docs.ruby-lang.org/en/master/Module.html#method-i-module_function[module_function]
+:modules_link: link:https://alchemists.io/articles/ruby_modules[Ruby Modules]
+
 = Functionable
+
+Enhances modules to be functional by disabling the ability to extend, include, or prepend while also ensuring all methods are class methods. This allows you to use a module as a functional collection of related methods for reuse throughout your application via _composition_ instead of _inheritance_. In other words, this is an enhanced version of {module_function_link} by preventing inheritance and reducing the memory overhead due to making copies of the original methods.
 
 toc::[]
 
 == Features
 
+* Allows modules to be a collection of functional methods.
+* Allows your modules and/or methods to be composable instead of inherited.
+* Provides faster performance and a reduced memory than any object within your application. See the xref:_benchmarks[Benchmarks] section for details.
+
 == Requirements
 
 . link:https://www.ruby-lang.org[Ruby].
+. A solid understanding {modules_link}.
 
 == Setup
 
@@ -45,6 +55,363 @@ require "functionable"
 ----
 
 == Usage
+
+Enhancing your module to be functional is as simple as extending your module:
+
+[source,ruby]
+----
+module Math
+  extend Functionable
+
+  def add(first, second) = first + second
+
+  def subtract(first, second) = first - second
+
+  def multiply(first, second) = first * second
+
+  def divide(first, second) = first / second
+end
+
+Math.add 6, 3       # 9
+Math.subtract 6, 3  # 3
+Math.multiply 6, 3  # 18
+Math.divide 6, 3    # 2
+----
+
+That's it! Now you can add related methods, as desired, which are specific to your namespace.
+
+=== Conceal
+
+Should you need to make any of your methods private, use the `conceal` method as follows:
+
+[source,ruby]
+----
+module Demo
+  extend Functionable
+
+  def welcome(*) = print(*)
+
+  def print(message = "The default message.") = puts message
+
+  conceal :print
+end
+
+Demo.welcome  # "The default message."
+Demo.print    # private method 'print' called for module Demo (NoMethodError)
+----
+
+The `conceal` method takes the same parameters as the link:https://docs.ruby-lang.org/en/master/Module.html#method-i-private_class_method[private_class_method] which means you can use a string, symbol, a single argument, multiple arguments, or an array.
+
+=== Avoidances
+
+Functional modules are only meant to be a collection of related methods which allows you to namespace your behavior, compose multiple methods together, and use composition to inject your module as a dependency within objects that need this functionality.
+
+This means the following behavior is disabled (each uses an anonymous module and/or class for demonstration purposes and reduced syntax).
+
+==== Extend
+
+Use composition instead of inheritance:
+
+[source,ruby]
+----
+functions = Module.new.extend Functionable
+Class.new.extend functions
+
+# Module extend is disabled. (NoMethodError)
+----
+
+==== Include
+
+Use composition instead of inheritance:
+
+[source,ruby]
+----
+functions = Module.new.extend Functionable
+Class.new.include functions
+
+# Module include is disabled. (NoMethodError)
+----
+
+You also can't include `Funtionable`, only extend:
+
+[source,ruby]
+----
+Module.new.include Functionable
+# Module include is disabled, use extend instead. (NoMethodError)
+----
+
+==== Prepend
+
+Use composition instead of inheritance:
+
+[source,ruby]
+----
+functions = Module.new.extend Functionable
+Class.new.prepend functions
+
+# Module prepend is disabled. (NoMethodError)
+----
+
+You also can't prepend, only extend:
+
+[source,ruby]
+----
+Module.new.prepend Functionable
+# Module prepend is disabled, use extend instead. (NoMethodError)
+----
+
+==== Module Function
+
+The following is not allowed because you have this behavior when extending `Functionable`:
+
+[source,ruby]
+----
+Module.new do
+  extend Functionable
+
+  module_function
+end
+
+# Module function behavior is disabled. (NoMethodError)
+----
+
+==== Public
+
+Avoid the following since all methods are public by default:
+
+[source,ruby]
+----
+Module.new do
+  extend Functionable
+
+  public
+
+  def demo = :demo
+end
+
+# Public visibility is disabled. (NoMethodError)
+----
+
+==== Protected
+
+Avoid the following since a functionable module isn't mean to be inherited:
+
+[source,ruby]
+----
+Module.new do
+  extend Functionable
+
+  protected
+
+  def demo = :demo
+end
+
+# Protected visibility is disabled. (NoMethodError)
+----
+
+==== Private
+
+Avoid the following by using xref:_conceal[conceal] instead:
+
+[source,ruby]
+----
+Module.new do
+  extend Functionable
+
+  private
+
+  def demo = :demo
+end
+
+# Private visibility is disabled, use conceal instead. (NoMethodError)
+----
+
+==== Aliasing
+
+Avoid aliasing as you are not meant to inherit methods within a functional module:
+
+[source,ruby]
+----
+Module.new do
+  extend Functionable
+
+  def demo = :demo
+  alias_method :demo, :alt
+end
+
+# Aliasing :alt as :demo is disabled. (NoMethodError)
+----
+
+==== Class Variables
+
+Avoid using class variables since they are a code smell and introduce unwanted state:
+
+[source,ruby]
+----
+demo = Module.new do
+  extend Functionable
+
+  def get = class_variable_get :@@bogus
+
+  def set = class_variable_set :@@bogus, :bogus
+end
+
+demo.get  # Getting class variable :@@bogus is disabled. (NoMethodError)
+demo.set  # Setting class variable :@@bogus is disabled. (NoMethodError)
+----
+
+==== Class Methods
+
+Avoid class methods, use instance methods instead:
+
+[source,ruby]
+----
+Module.new do
+  extend Functionable
+
+  def self.bogus = :bogus
+end
+
+# Avoid defining :bogus as a class method because the method will be automatically converted to a class method for you. (NoMethodError)
+----
+
+==== Constants
+
+Avoid dynamically setting constants since you can add constants directly to the top of the module:
+
+[source,ruby]
+----
+demo = Module.new do
+  extend Functionable
+
+  def bogus = const_set :BOGUS, :bogus
+end
+
+demo.bogus  # Setting constant :BOGUS is disabled. (NoMethodError)
+----
+
+==== Define Method
+
+Avoid dynamically defining a method since you can explicitly define your method instead:
+
+[source,ruby]
+----
+Module.new do
+  extend Functionable
+
+  define_method :bogus, :bogus
+end
+
+# Defining method :bogus is disabled. (NoMethodError)
+----
+
+==== Remove Method
+
+Avoid dynamically removing a method since you can explicitly delete the method instead.
+
+[source,ruby]
+----
+Module.new do
+  extend Functionable
+
+  remove_method :bogus
+end
+
+# Removing method :bogus is disabled. (NoMethodError)
+----
+
+==== Undef Method
+
+Avoid dynamically undefining a method since you can explicitly delete the method instead.
+
+[source,ruby]
+----
+Module.new do
+  extend Functionable
+
+  undef_method :bogus
+end
+
+# Undefining method :bogus is disabled. (NoMethodError)
+----
+
+== Benchmarks
+
+When you lean into the power of functional programming in Ruby, you gain performance and lower your memory footprint since you are creating the minimal amount of objects necessary. In terms of CPU performance, here's a comparison:
+
+[source,ruby]
+----
+require "bundler/inline"
+
+gemfile true do
+  source "https://rubygems.org"
+
+  gem "benchmark-ips"
+  gem "functionable"
+end
+
+ProcExample = proc { |message = "benchmark"| message }
+LambdaExample = -> message = "benchmark" { message }
+
+module ModuleExample
+  extend Functionable
+
+  def call(message = "benchmark") = message
+end
+
+class ClassExample
+  def initialize message = "benchmark"
+    @message = message
+  end
+
+  def call = message
+
+  private
+
+  attr_reader :message
+end
+
+memoized_function = ClassExample.new
+
+Benchmark.ips do |benchmark|
+  benchmark.config time: 5, warmup: 2
+
+  benchmark.report("Proc") { ProcExample.call }
+  benchmark.report("Lambda") { LambdaExample.call }
+  benchmark.report("Module") { ModuleExample.call }
+  benchmark.report("Class (new)") { ClassExample.new.call }
+  benchmark.report("Class (memoized)") { memoized_function.call }
+
+  benchmark.compare!
+end
+----
+
+When you run the above benchmark, you should see the following results:
+
+----
+ruby 3.4.7 (2025-10-08 revision 7a5688e2a2) +YJIT +PRISM [arm64-darwin24.6.0]
+Warming up --------------------------------------
+                Proc     2.370M i/100ms
+              Lambda     2.335M i/100ms
+              Module     4.153M i/100ms
+         Class (new)     1.394M i/100ms
+    Class (memoized)     4.341M i/100ms
+Calculating -------------------------------------
+                Proc     25.039M (± 0.5%) i/s   (39.94 ns/i) -    125.624M in   5.017274s
+              Lambda     25.657M (± 0.3%) i/s   (38.98 ns/i) -    128.450M in   5.006465s
+              Module     59.812M (± 2.0%) i/s   (16.72 ns/i) -    303.169M in   5.070730s
+         Class (new)     15.891M (± 1.3%) i/s   (62.93 ns/i) -     80.870M in   5.089769s
+    Class (memoized)     58.271M (± 1.5%) i/s   (17.16 ns/i) -    295.161M in   5.066395s
+
+Comparison:
+              Module: 59812197.4 i/s
+    Class (memoized): 58271006.1 i/s - same-ish: difference falls within error
+              Lambda: 25657201.2 i/s - 2.33x  slower
+                Proc: 25039056.2 i/s - 2.39x  slower
+         Class (new): 15891475.5 i/s - 3.76x  slower
+----
+
+As you can see, a functional module is the fastest while a memoized class comes in at a very close second (despite creating an additional object). Everything else is much slower.
 
 == Development
 
