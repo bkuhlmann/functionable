@@ -337,29 +337,41 @@ end
 
 == Benchmarks
 
-When you lean into the power of functional programming in Ruby, you gain performance and lower your memory footprint since you are creating the minimal amount of objects necessary. In terms of CPU performance, here's a comparison:
+When you lean into the power of functional programming in Ruby, you gain performance and lower your memory footprint since you are creating the minimal amount of objects necessary. In terms of CPU performance, here's a benchmark script (see `bin/benchmark` included in this project):
 
 [source,ruby]
 ----
+#! /usr/bin/env ruby
+# frozen_string_literal: true
+
 require "bundler/inline"
 
 gemfile true do
   source "https://rubygems.org"
 
   gem "benchmark-ips"
-  gem "functionable"
+  gem "functionable", path: ".."
 end
 
-ProcExample = proc { |message = "benchmark"| message }
-LambdaExample = -> message = "benchmark" { message }
+module ModuleSelf
+  extend self
 
-module ModuleExample
+  def call(message = "benchmark") = message
+end
+
+module ModuleFunction
+  module_function
+
+  def call(message = "benchmark") = message
+end
+
+module ModuleFunctionable
   extend Functionable
 
   def call(message = "benchmark") = message
 end
 
-class ClassExample
+class ClassFunction
   def initialize message = "benchmark"
     @message = message
   end
@@ -371,16 +383,23 @@ class ClassExample
   attr_reader :message
 end
 
-memoized_function = ClassExample.new
+proc_function = proc { |message = "message"| message }
+lambda_function = -> message = "benchmark" { message }
+memoized_instance = ClassFunction.new
+memoized_method = memoized_instance.method :call
 
 Benchmark.ips do |benchmark|
   benchmark.config time: 5, warmup: 2
 
-  benchmark.report("Proc") { ProcExample.call }
-  benchmark.report("Lambda") { LambdaExample.call }
-  benchmark.report("Module") { ModuleExample.call }
-  benchmark.report("Class (new)") { ClassExample.new.call }
-  benchmark.report("Class (memoized)") { memoized_function.call }
+  benchmark.report("Proc") { proc_function.call }
+  benchmark.report("Lambda") { lambda_function.call }
+  benchmark.report("Module (function)") { ModuleFunction.call }
+  benchmark.report("Module (functionable)") { ModuleFunctionable.call }
+  benchmark.report("Module (self)") { ModuleSelf.call }
+  benchmark.report("Class (new)") { ClassFunction.new.call }
+  benchmark.report("Class (memoized)") { memoized_instance.call }
+  benchmark.report("Method (new)") { memoized_instance.method(:call).call }
+  benchmark.report("Method (memoized)") { memoized_method.call }
 
   benchmark.compare!
 end
@@ -391,27 +410,41 @@ When you run the above benchmark, you should see the following results:
 ----
 ruby 3.4.7 (2025-10-08 revision 7a5688e2a2) +YJIT +PRISM [arm64-darwin24.6.0]
 Warming up --------------------------------------
-                Proc     2.370M i/100ms
-              Lambda     2.335M i/100ms
-              Module     4.153M i/100ms
-         Class (new)     1.394M i/100ms
-    Class (memoized)     4.341M i/100ms
+                Proc     2.268M i/100ms
+              Lambda     2.327M i/100ms
+   Module (function)     3.984M i/100ms
+Module (functionable)
+                         4.143M i/100ms
+       Module (self)     4.177M i/100ms
+         Class (new)     1.266M i/100ms
+    Class (memoized)     4.128M i/100ms
+        Method (new)   775.573k i/100ms
+   Method (memoized)     2.053M i/100ms
 Calculating -------------------------------------
-                Proc     25.039M (± 0.5%) i/s   (39.94 ns/i) -    125.624M in   5.017274s
-              Lambda     25.657M (± 0.3%) i/s   (38.98 ns/i) -    128.450M in   5.006465s
-              Module     59.812M (± 2.0%) i/s   (16.72 ns/i) -    303.169M in   5.070730s
-         Class (new)     15.891M (± 1.3%) i/s   (62.93 ns/i) -     80.870M in   5.089769s
-    Class (memoized)     58.271M (± 1.5%) i/s   (17.16 ns/i) -    295.161M in   5.066395s
+                Proc     24.944M (± 1.5%) i/s   (40.09 ns/i) -    124.748M in   5.002287s
+              Lambda     25.683M (± 0.6%) i/s   (38.94 ns/i) -    130.294M in   5.073248s
+   Module (function)     58.738M (± 2.9%) i/s   (17.02 ns/i) -    294.792M in   5.022900s
+Module (functionable)
+                         58.607M (± 2.5%) i/s   (17.06 ns/i) -    294.182M in   5.022770s
+       Module (self)     57.811M (± 2.4%) i/s   (17.30 ns/i) -    292.388M in   5.060572s
+         Class (new)     14.801M (± 1.3%) i/s   (67.56 ns/i) -     74.684M in   5.046650s
+    Class (memoized)     59.130M (± 0.4%) i/s   (16.91 ns/i) -    297.230M in   5.026825s
+        Method (new)      9.030M (± 1.4%) i/s  (110.74 ns/i) -     45.759M in   5.068493s
+   Method (memoized)     24.870M (± 0.2%) i/s   (40.21 ns/i) -    125.231M in   5.035364s
 
 Comparison:
-              Module: 59812197.4 i/s
-    Class (memoized): 58271006.1 i/s - same-ish: difference falls within error
-              Lambda: 25657201.2 i/s - 2.33x  slower
-                Proc: 25039056.2 i/s - 2.39x  slower
-         Class (new): 15891475.5 i/s - 3.76x  slower
+    Class (memoized): 59129953.7 i/s
+   Module (function): 58738432.2 i/s - same-ish: difference falls within error
+Module (functionable): 58607417.9 i/s - same-ish: difference falls within error
+       Module (self): 57810666.8 i/s - same-ish: difference falls within error
+              Lambda: 25683494.8 i/s - 2.30x  slower
+                Proc: 24943941.2 i/s - 2.37x  slower
+   Method (memoized): 24870425.2 i/s - 2.38x  slower
+         Class (new): 14801271.5 i/s - 3.99x  slower
+        Method (new):  9029806.7 i/s - 6.55x  slower
 ----
 
-As you can see, a functional module is the fastest while a memoized class comes in at a very close second (despite creating an additional object). Everything else is much slower.
+As you can see, a functional module is one of the fastest while everything else is much slower.
 
 == Development
 

@@ -1,0 +1,62 @@
+#! /usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/inline"
+
+gemfile true do
+  source "https://rubygems.org"
+
+  gem "benchmark-ips"
+  gem "functionable", path: ".."
+end
+
+module ModuleSelf
+  extend self
+
+  def call(message = "benchmark") = message
+end
+
+module ModuleFunction
+  module_function
+
+  def call(message = "benchmark") = message
+end
+
+module ModuleFunctionable
+  extend Functionable
+
+  def call(message = "benchmark") = message
+end
+
+class ClassFunction
+  def initialize message = "benchmark"
+    @message = message
+  end
+
+  def call = message
+
+  private
+
+  attr_reader :message
+end
+
+proc_function = proc { |message = "message"| message }
+lambda_function = -> message = "benchmark" { message }
+memoized_instance = ClassFunction.new
+memoized_method = memoized_instance.method :call
+
+Benchmark.ips do |benchmark|
+  benchmark.config time: 5, warmup: 2
+
+  benchmark.report("Proc") { proc_function.call }
+  benchmark.report("Lambda") { lambda_function.call }
+  benchmark.report("Module (function)") { ModuleFunction.call }
+  benchmark.report("Module (functionable)") { ModuleFunctionable.call }
+  benchmark.report("Module (self)") { ModuleSelf.call }
+  benchmark.report("Class (new)") { ClassFunction.new.call }
+  benchmark.report("Class (memoized)") { memoized_instance.call }
+  benchmark.report("Method (new)") { memoized_instance.method(:call).call }
+  benchmark.report("Method (memoized)") { memoized_method.call }
+
+  benchmark.compare!
+end

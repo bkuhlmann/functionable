@@ -6,6 +6,9 @@ Lint/UselessAccessModifier:
 Style/ClassVars:
   Exclude:
     - spec/lib/functionable_spec.rb
+Style/ModuleFunction:
+  Exclude:
+    - bin/benchmark
 Metrics/AbcSize:
   AllowedMethods:
     - extended
