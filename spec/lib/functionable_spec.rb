@@ -133,11 +133,11 @@ RSpec.describe Functionable do
           extend Functionable
 
           def one = 1
-          alias_method :one, :two
+          alias_method :two, :one
         end
       end
 
-      expect(&expectation).to raise_error(NoMethodError, "Aliasing :two as :one is disabled.")
+      expect(&expectation).to raise_error(NoMethodError, "Aliasing :one as :two is disabled.")
     end
 
     it "fails when setting a class variable" do
