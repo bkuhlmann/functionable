@@ -81,6 +81,23 @@ RSpec.describe Functionable do
       expect(&expectation).to raise_error(NoMethodError, message)
     end
 
+    it "answers empty array when no function methods are defined" do
+      implementation = Module.new.extend described_class
+      expect(implementation.function_methods).to eq([])
+    end
+
+    it "answers array of names when function methods are defined" do
+      implementation = Module.new do
+        extend Functionable
+
+        def one = :one
+
+        def two = :two
+      end
+
+      expect(implementation.function_methods).to eq(%i[one two])
+    end
+
     it "conceals single private class method" do
       implementation = Module.new do
         extend Functionable

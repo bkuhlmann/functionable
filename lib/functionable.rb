@@ -20,6 +20,10 @@ module Functionable
 
       def private(*) = fail NoMethodError, "Private visibility is disabled, use conceal instead."
 
+      def function_methods
+        @function_methods ||= []
+      end
+
       def conceal(*) = private_class_method(*)
 
       def alias_method to, from
@@ -59,6 +63,7 @@ module Functionable
       def method_added name
         unbound = instance_method name
 
+        function_methods.append name
         instance_variable_set :@functionable, true
         remove_method name
         define_singleton_method name, unbound
