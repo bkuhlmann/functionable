@@ -80,6 +80,42 @@ Math.divide 6, 3    # 2
 
 That's it! Now you can add related methods, as desired, which are specific to your namespace.
 
+=== Function Methods
+
+You can acquire the array of function method names that were implemented and created by you. By default, you'll get an empty array when no methods are defined:
+
+[source,ruby]
+----
+module Demo
+  extend Functionable
+end
+
+Demo.function_methods  # []
+----
+
+Once methods are defined, you'll then get an array of names:
+
+[source,ruby]
+----
+module Demo
+  extend Functionable
+
+  def one = 1
+
+  def two = 2
+end
+
+Demo.function_methods  # [:one, :two]
+----
+
+This behavior is similar to what a `Module` already provides you when it comes to categorizing method names:
+
+* `Module#instance_methods`
+* `Module#private_instance_methods`
+* `Module#protected_instance_methods`
+* `Module#public_instance_methods`
+* `Module#undefined_instance_methods`
+
 === Conceal
 
 Should you need to make any of your methods private, use the `conceal` method as follows:
