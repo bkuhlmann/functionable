@@ -11,3 +11,5 @@ detectors:
   TooManyStatements:
     exclude:
       - Functionable#self.extended
+  UnusedParameters:
+    enabled: false
